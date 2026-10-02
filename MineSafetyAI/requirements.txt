@@ -1,7 +1,12 @@
 fastapi
 uvicorn[standard]
 python-multipart
-joblib
 pandas
+joblib
 scikit-learn
 ultralytics
+torch
+torchvision
+opencv-python-headless
+Pillow
+numpy
