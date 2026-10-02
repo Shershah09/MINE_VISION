@@ -44,14 +44,14 @@ def run_ai(image_path, sensor_data):
     # ---------- Vision AI ----------
     helmet_result = helmet_model(
         image_path,
-        device=0,
+        device="cpu",
         conf=0.25,
         verbose=False
     )[0]
 
     worker_result = worker_model(
         image_path,
-        device=0,
+        device="cpu",
         classes=[0],
         conf=0.35,
         verbose=False
@@ -59,7 +59,7 @@ def run_ai(image_path, sensor_data):
 
     fire_smoke_result = fire_smoke_model(
         image_path,
-        device=0,
+        device="cpu",
         conf=0.55,
         verbose=False
     )[0]
