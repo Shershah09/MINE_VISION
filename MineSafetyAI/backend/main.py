@@ -1,23 +1,19 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, UploadFile, File, Form
-from backend.ai_service import run_ai
 from pathlib import Path
 import shutil
-
+import traceback
 
 app = FastAPI(title="MineSafetyAI Backend")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5500",
-        "http://localhost:5500",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Create upload folder
 UPLOAD_DIR = Path("data/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -42,32 +38,47 @@ async def analyze(
     humidity: float = Form(...)
 ):
 
-    # Save uploaded image
-    image_path = UPLOAD_DIR / image.filename
+    try:
 
-    with open(image_path, "wb") as buffer:
-        shutil.copyfileobj(image.file, buffer)
+        print("========== ANALYZE START ==========")
 
+        print("Image received:", image.filename)
 
-    # Sensor data
-    sensor_data = {
-        "CH4": CH4,
-        "CO": CO,
-        "CO2": CO2,
-        "O2": O2,
-        "temperature": temperature,
-        "humidity": humidity
-    }
+        image_path = UPLOAD_DIR / image.filename
 
+        with open(image_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
 
-    # Run Gas AI + Vision AI
-    result = run_ai(
-        str(image_path),
-        sensor_data
-    )
+        print("Image saved:", image_path)
 
+        sensor_data = {
+            "CH4": CH4,
+            "CO": CO,
+            "CO2": CO2,
+            "O2": O2,
+            "temperature": temperature,
+            "humidity": humidity
+        }
 
-    return {
-        "image": image.filename,
-        "ai_result": result
-    }
+        print("Sensor data:", sensor_data)
+
+        # TEMPORARY TEST
+        # We are NOT running AI yet.
+
+        return {
+            "status": "SUCCESS",
+            "message": "Image upload and sensor data received successfully",
+            "image": image.filename,
+            "sensor_data": sensor_data
+        }
+
+    except Exception as e:
+
+        print("========== ANALYZE ERROR ==========")
+        print(str(e))
+        traceback.print_exc()
+
+        return {
+            "status": "ERROR",
+            "error": str(e)
+        }
