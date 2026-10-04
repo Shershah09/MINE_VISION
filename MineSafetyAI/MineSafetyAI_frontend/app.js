@@ -2,8 +2,7 @@
 // NEXUS ROVER - COMPLETE FRONTEND JAVASCRIPT
 // CAMERA + MAP UPGRADED
 // ============================================================
-
-const API_URL = "http://127.0.0.1:8000/analyze";
+const API_URL = "https://mine-vision-gc8u.onrender.com/analyze";
 
 let autoTimer = null;
 let emergencyActive = false;
