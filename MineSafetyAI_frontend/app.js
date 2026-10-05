@@ -3,7 +3,11 @@
 // CAMERA + MAP UPGRADED
 // ============================================================
 
-const API_URL = "https://mine-vision-gc8u.onrender.com/analyze";
+const API_URL =
+    (window.location.hostname === "localhost" ||
+     window.location.hostname === "127.0.0.1")
+        ? "http://127.0.0.1:8000/analyze"
+        : "https://mine-vision-gc8u.onrender.com/analyze";
 
 let autoTimer = null;
 let emergencyActive = false;
@@ -835,166 +839,97 @@ function fileFromInput() {
 
 async function analyze() {
 
-    const image =
-        await fileFromInput();
-
+    const image = await fileFromInput();
 
     if (!image) {
-
-        showNotification(
-            "AI Analysis",
-            "No image selected."
-        );
-
+        showNotification("AI Analysis", "No image selected.");
         return;
-
     }
 
-
-    const fd =
-        new FormData();
-
-
-    fd.append(
-        "image",
-        image
-    );
-
+    const fd = new FormData();
+    fd.append("image", image);
 
     const sensorIds = [
-
-        "CH4",
-        "CO",
-        "CO2",
-        "O2",
-        "temperature",
-        "humidity"
-
+        "CH4", "CO", "CO2", "O2", "temperature", "humidity"
     ];
 
-
     sensorIds.forEach(id => {
-
-        const element =
-            document.getElementById(id);
-
-
+        const element = document.getElementById(id);
         if (element) {
-
-            fd.append(
-                id,
-                element.value
-            );
-
+            fd.append(id, element.value);
         }
-
     });
 
+    const list = document.getElementById("alertsList");
 
-    const list =
-        document.getElementById(
-            "alertsList"
-        );
-
-
+    // Keep the existing Recent Alerts.
+    // Only create/update the separate AI result section.
     if (list) {
+        let aiAlert = document.getElementById("aiAnalysisResult");
 
-        list.innerHTML = `
-
-            <div class="alert">
-
-                ⏳ <b>
-                    AI analysis running...
-                </b>
-
-                <small>
-                    Sending image and sensor data to FastAPI.
-                </small>
-
-            </div>
-
-        `;
-
-    }
-
-
-    showNotification(
-        "AI Analysis",
-        "Sending image to backend..."
-    );
-
-
-    try {
-
-        const res =
-            await fetch(
-                API_URL,
-                {
-                    method: "POST",
-                    body: fd
-                }
-            );
-
-
-        if (!res.ok) {
-
-            throw new Error(
-                "API returned HTTP " +
-                res.status
-            );
-
+        if (!aiAlert) {
+            aiAlert = document.createElement("div");
+            aiAlert.id = "aiAnalysisResult";
+            list.appendChild(aiAlert);
         }
 
+        aiAlert.innerHTML = `
+            <div class="alert">
+                ⏳ <b>AI analysis running...</b>
+                <small>Sending image and sensor data to FastAPI.</small>
+            </div>
+        `;
+    }
 
-        const data =
-            await res.json();
+    showNotification("AI Analysis", "Sending image to backend...");
 
+    try {
+        const res = await fetch(API_URL, {
+            method: "POST",
+            body: fd
+        });
+
+        if (!res.ok) {
+            throw new Error("API returned HTTP " + res.status);
+        }
+
+        const data = await res.json();
 
         updateDashboard(data);
-
 
         showNotification(
             "AI Analysis Complete",
             "Analysis results received successfully."
         );
 
-
-    }
-
-    catch (err) {
-
+    } catch (err) {
         console.error(err);
 
-
         if (list) {
+            let aiAlert = document.getElementById("aiAnalysisResult");
 
-            list.innerHTML = `
+            if (!aiAlert) {
+                aiAlert = document.createElement("div");
+                aiAlert.id = "aiAnalysisResult";
+                list.appendChild(aiAlert);
+            }
 
+            aiAlert.innerHTML = `
                 <div class="alert critical">
-
-                    ❌ <b>
-                        Backend connection failed
-                    </b>
-
+                    ❌ <b>Backend connection failed</b>
                     <small>
                         ${err.message}.
-                        Make sure FastAPI is running on port 8000.
+                        Check the FastAPI/Render backend.
                     </small>
-
                 </div>
-
             `;
-
         }
-
 
         showNotification(
             "Backend Error",
             "Could not connect to FastAPI."
         );
-
     }
-
 }
 
 
@@ -1005,130 +940,65 @@ async function analyze() {
 function updateDashboard(d) {
 
     const overall =
-        String(
-            d.overall_risk ??
-            "UNKNOWN"
-        ).toUpperCase();
-
+        String(d.overall_risk ?? "UNKNOWN").toUpperCase();
 
     const worker =
-        String(
-            d.worker ??
-            "UNKNOWN"
-        ).toUpperCase();
-
+        String(d.worker ?? "UNKNOWN").toUpperCase();
 
     const helmet =
-        String(
-            d.helmet ??
-            "UNKNOWN"
-        ).toUpperCase();
-
+        String(d.helmet ?? "UNKNOWN").toUpperCase();
 
     const fire =
-        String(
-            d.fire ??
-            "UNKNOWN"
-        ).toUpperCase();
-
+        String(d.fire ?? "UNKNOWN").toUpperCase();
 
     const smoke =
-        String(
-            d.smoke ??
-            "UNKNOWN"
-        ).toUpperCase();
+        String(d.smoke ?? "UNKNOWN").toUpperCase();
 
-
-    const status =
-        document.querySelector(
-            ".status"
-        );
-
+    const status = document.querySelector(".status");
 
     if (status) {
-
         status.textContent =
-            overall === "CRITICAL"
-                ? "Critical"
-                : "Normal";
-
+            overall === "CRITICAL" ? "Critical" : "Normal";
 
         status.style.background =
-            overall === "CRITICAL"
-                ? "#e33"
-                : "#20a75a";
-
+            overall === "CRITICAL" ? "#e33" : "#20a75a";
     }
 
-
-    const list =
-        document.getElementById(
-            "alertsList"
-        );
-
+    const list = document.getElementById("alertsList");
 
     if (!list) return;
 
+    // IMPORTANT:
+    // Never replace alertsList.innerHTML.
+    // Existing Recent Alerts must stay visible.
+    let aiAlert = document.getElementById("aiAnalysisResult");
 
-    list.innerHTML = `
+    if (!aiAlert) {
+        aiAlert = document.createElement("div");
+        aiAlert.id = "aiAnalysisResult";
+        list.appendChild(aiAlert);
+    }
 
-        <div class="alert
-            ${overall === "CRITICAL"
-                ? "critical"
-                : ""}">
-
-            ${overall === "CRITICAL"
-                ? "🚨"
-                : "ℹ️"}
-
-            <b>
-                Overall Risk: ${overall}
-            </b>
-
+    aiAlert.innerHTML = `
+        <div class="alert ${overall === "CRITICAL" ? "critical" : ""}">
+            ${overall === "CRITICAL" ? "🚨" : "ℹ️"}
+            <b>Overall Risk: ${overall}</b>
             <small>
-
-                Vision Risk:
-                ${d.vision_risk ?? "N/A"}
-
-                |
-
-                Gas Risk:
-                ${d.gas_risk ?? "N/A"}
-
+                Vision Risk: ${d.vision_risk ?? "N/A"} |
+                Gas Risk: ${d.gas_risk ?? "N/A"}
             </small>
-
         </div>
-
 
         <div class="alert">
-
-            👷
-            <b>
-                Worker: ${worker}
-            </b>
-
-            <small>
-                Helmet: ${helmet}
-            </small>
-
+            👷 <b>Worker: ${worker}</b>
+            <small>Helmet: ${helmet}</small>
         </div>
-
 
         <div class="alert">
-
-            🔥
-            <b>
-                Fire: ${fire}
-            </b>
-
-            <small>
-                Smoke: ${smoke}
-            </small>
-
+            🔥 <b>Fire: ${fire}</b>
+            <small>Smoke: ${smoke}</small>
         </div>
-
     `;
-
 }
 
 
