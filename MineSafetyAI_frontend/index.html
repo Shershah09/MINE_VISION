@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS Rover — Mine Safety & Exploration</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">▲</div>
+      <div><b>MINE <span>VISION</span></b><small>Mine Rescue & Exploration</small></div>
+    </div>
+    <div class="system-info">
+      <span id="clock">12:45:30</span>
+      <span>● Connected</span>
+      <span>▮▮▮</span>
+      <span>🔋 <b>78%</b></span>
+    </div>
+    <button class="emergency" onclick="emergencyStop()">⚠ EMERGENCY STOP</button>
+  </header>
+
+  <aside class="sidebar">
+    <button class="nav active">⌂ <span>Home</span></button>
+    <button class="nav">◫ <span>Map & SLAM</span></button>
+    <button class="nav">◉ <span>Live Camera</span></button>
+    <button class="nav">⌁ <span>Sensors</span></button>
+    <button class="nav">🎮 <span>Rover Control</span></button>
+    <button class="nav">▣ <span>Mission Log</span></button>
+    <button class="nav">◉ <span>AI Detection</span></button>
+    <button class="nav">♟ <span>Alerts <i>3</i></span></button>
+    <button class="nav">⚙ <span>Settings</span></button>
+  </aside>
+
+  <main class="dashboard">
+    <section class="panel camera">
+      <div class="panel-title" id="cameraTitle">📷 Front Camera - Live Feed <span class="rec">● REC</span></div>
+
+      <div class="camera-view" id="cameraView">
+        <img id="frontCameraScene" class="camera-scene" src="front_camera.png" alt="Front RGB camera view">
+        <img id="rearCameraScene" class="camera-scene hidden" src="rear_camera.png" alt="Rear RGB camera view">
+        <div id="thermalCameraScene" class="camera-scene thermal-camera-scene hidden"></div>
+        <img id="lidarCameraScene" class="camera-scene hidden" src="lidar_view.png" alt="LiDAR point cloud view">
+        <div class="camera-overlay" id="cameraOverlay">Live AI vision feed</div>
+      </div>
+
+      <div class="thumbs">
+        <button class="thumb active" data-camera="Front" type="button">Front</button>
+        <button class="thumb" data-camera="Rear" type="button">Rear</button>
+        <button class="thumb thermal" data-camera="Thermal" type="button">Thermal</button>
+        <button class="thumb lidar" data-camera="LiDAR" type="button">LiDAR</button>
+      </div>
+    </section>
+
+    <section class="panel map-panel">
+      <div class="panel-title">🧊 3D Mine Map (SLAM)</div>
+      <div class="mine-map" id="mineMap">
+        <svg class="mine-map-svg" viewBox="0 0 1000 500" preserveAspectRatio="none" aria-label="Mine map showing rover movement and detected risks">
+          <defs>
+            <pattern id="mapGrid" width="45" height="45" patternUnits="userSpaceOnUse">
+              <path d="M45 0 L0 0 0 45" fill="none" stroke="#38515d" stroke-width="1" opacity="0.42"/>
+            </pattern>
+            <linearGradient id="tunnelFloor" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#7c878b"/><stop offset="0.5" stop-color="#b1b5b2"/><stop offset="1" stop-color="#536068"/>
+            </linearGradient>
+            <filter id="mapGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <rect width="1000" height="500" fill="#091720"/>
+          <rect width="1000" height="500" fill="url(#mapGrid)"/>
+
+          <!-- Mine tunnel corridor -->
+          <path d="M80 430 C145 390 135 330 220 300 C300 272 360 302 420 240 C480 178 515 110 625 128 C735 145 805 245 910 100" fill="none" stroke="#26343c" stroke-width="118" stroke-linecap="round"/>
+          <path d="M80 430 C145 390 135 330 220 300 C300 272 360 302 420 240 C480 178 515 110 625 128 C735 145 805 245 910 100" fill="none" stroke="url(#tunnelFloor)" stroke-width="78" stroke-linecap="round"/>
+
+          <!-- SLAM point-cloud edges -->
+          <g fill="#d2d8d8" opacity=".38">
+            <circle cx="120" cy="398" r="4"/><circle cx="155" cy="365" r="3"/><circle cx="185" cy="325" r="4"/><circle cx="225" cy="292" r="3"/><circle cx="270" cy="278" r="4"/>
+            <circle cx="320" cy="286" r="3"/><circle cx="365" cy="285" r="4"/><circle cx="410" cy="250" r="3"/><circle cx="450" cy="200" r="4"/><circle cx="490" cy="150" r="3"/>
+            <circle cx="545" cy="120" r="4"/><circle cx="610" cy="128" r="3"/><circle cx="675" cy="150" r="4"/><circle cx="735" cy="190" r="3"/><circle cx="790" cy="245" r="4"/><circle cx="845" cy="205" r="3"/>
+          </g>
+
+          <!-- Planned and visited route -->
+          <path id="plannedPath" d="M80 430 C145 390 135 330 220 300 C300 272 360 302 420 240 C480 178 515 110 625 128 C735 145 805 245 910 100" fill="none" stroke="#2ee58b" stroke-width="8" stroke-linecap="round" filter="url(#mapGlow)"/>
+          <path id="visitedPath" d="M80 430" fill="none" stroke="#36cfff" stroke-width="6" stroke-dasharray="10 9" stroke-linecap="round"/>
+
+          <!-- Risks -->
+          <g class="map-risk" data-risk="Water detected ahead — estimated depth 18 cm">
+            <circle cx="735" cy="185" r="38" fill="#e92835" opacity=".25"/><circle cx="735" cy="185" r="20" fill="#e92835"/><text x="735" y="192" text-anchor="middle" font-size="18" fill="#fff">💧</text>
+          </g>
+          <g class="map-risk" data-risk="High methane level — CH₄ 0.8 %LEL">
+            <circle cx="430" cy="220" r="34" fill="#f2ad19" opacity=".25"/><circle cx="430" cy="220" r="18" fill="#f2ad19"/><text x="430" y="226" text-anchor="middle" font-size="15" fill="#fff">CH₄</text>
+          </g>
+          <g class="map-risk" data-risk="Worker detected — confidence 92%">
+            <circle cx="565" cy="128" r="18" fill="#f5c400"/><text x="565" y="135" text-anchor="middle" font-size="18">●</text>
+          </g>
+          <g class="map-risk" data-risk="Obstacle / rockfall detected">
+            <circle cx="285" cy="285" r="12" fill="#ff7138"/><circle cx="307" cy="274" r="9" fill="#ff9a55"/><circle cx="300" cy="294" r="7" fill="#ff5d2f"/>
+          </g>
+          <g class="map-risk" data-risk="Fire / smoke risk detected">
+            <circle cx="835" cy="180" r="20" fill="#ff4b1f"/><text x="835" y="187" text-anchor="middle" font-size="17">🔥</text>
+          </g>
+
+          <!-- Moving rover -->
+          <g id="roverMapMarker" class="rover-map-marker" transform="translate(80 430)">
+            <circle r="25" fill="#2b9cff" opacity=".25" class="rover-pulse"/>
+            <circle r="13" fill="#ffe15a" stroke="#18221f" stroke-width="4"/>
+            <path d="M0 -11 L10 9 L0 5 L-10 9 Z" fill="#18221f"/>
+          </g>
+        </svg>
+
+        <div class="map-compass">N<br><span>W&nbsp;&nbsp;E</span><br>S</div>
+        <div class="map-label flood-label">🔴 Water / Flooded Area<br><small>18 cm depth</small></div>
+        <div class="map-label gas-label">🟠 High Methane<br><small>0.8 %LEL</small></div>
+        <div class="map-label worker-label">🟡 Worker Detected<br><small>Confidence 92%</small></div>
+        <div class="map-label fire-label">🔥 Fire / Smoke Risk</div>
+        <div class="map-label obstacle-label">🟠 Obstacle / Rockfall</div>
+
+        <div class="map-controls">
+          <button type="button" id="mapZoomIn">+</button>
+          <button type="button" id="mapZoomOut">−</button>
+          <button type="button" id="mapReset">⌾</button>
+        </div>
+
+        <div class="legend map-legend">
+          <b>▲ Rover (Current)</b><br>
+          <span class="legend-green">━</span> Planned Path<br>
+          <span class="legend-cyan">┄</span> Visited Path<br>
+          <span class="legend-red">●</span> Flooded / Water<br>
+          <span class="legend-orange">●</span> Obstacle / Methane<br>
+          <span class="legend-yellow">●</span> Worker Location<br>
+          <span class="legend-fire">●</span> Fire / Smoke
+        </div>
+        <div class="rover-map-status" id="mapRoverStatus">AUTOMATIC • MOVING</div>
+      </div>
+    </section>
+
+    <section class="panel sensors">
+      <div class="panel-title">🌿 Environmental Sensors <span class="status">Normal</span></div>
+      <div class="sensor-grid">
+        <label>🔥 CH₄ <b><input id="CH4" type="number" value="0.8" step="0.1"> %LEL</b></label>
+        <label>⚙ CO <b><input id="CO" type="number" value="5"> ppm</b></label>
+        <label>☁ CO₂ <b><input id="CO2" type="number" value="650"> ppm</b></label>
+        <label>💧 O₂ <b><input id="O2" type="number" value="20.5" step="0.1"> %</b></label>
+        <label>🌡 Temperature <b><input id="temperature" type="number" value="24.3" step="0.1"> °C</b></label>
+        <label>💦 Humidity <b><input id="humidity" type="number" value="68"> %</b></label>
+      </div>
+      <button class="analyze-btn" onclick="analyze()">RUN AI ANALYSIS</button>
+    </section>
+
+    <section class="panel alerts">
+      <div class="panel-title">⚠ Recent Alerts <span class="view">View All →</span></div>
+      <div id="alertsList">
+        <div class="alert alert-water">
+          <span class="alert-icon">⚠</span><div><b>Water detected ahead</b><small>Estimated depth: 18 cm &nbsp; • &nbsp; Recommendation: Stop / Reroute</small></div><time>12:44:12</time>
+        </div>
+        <div class="alert alert-methane">
+          <span class="alert-icon">⚠</span><div><b>High methane level</b><small>CH₄ reading: 0.8 %LEL</small></div><time>12:40:03</time>
+        </div>
+        <div class="alert alert-info">
+          <span class="alert-icon">●</span><div><b>Mapping updated (Tunnel A)</b><small>SLAM map successfully updated</small></div><time>12:35:21</time>
+        </div>
+        <div class="alert alert-worker">
+          <span class="alert-icon">●</span><div><b>Worker detected</b><small>Distance: 18 m (Confidence: 92%)</small></div><time>12:33:10</time>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel rover-status">
+      <div class="panel-title">⚙ Rover Status</div>
+      <div class="status-body">
+        <div class="rover-icon">🤖</div>
+        <div class="status-lines">
+          <p>Mode <b id="modeLabel">Automatic</b></p>
+          <p>Speed <b id="speedValue">0.4 m/s</b></p>
+          <p>Battery <b>78%</b></p>
+          <p>Connection <b class="good">Good</b></p>
+          <p>System <b class="good">Normal</b></p>
+        </div>
+      </div>
+      <div class="stats">
+        <div>📍 Distance<br><b id="distanceValue">125 m</b></div>
+        <div>◷ Mission<br><b>00:32:18</b></div>
+        <div>▱ Area<br><b>320 m²</b></div>
+      </div>
+    </section>
+
+    <section class="panel control">
+      <div class="panel-title">🎮 Rover Control
+        <div class="mode-switch">
+          <button id="manualBtn" type="button">Manual</button>
+          <button id="autoBtn" class="selected" type="button">Automatic</button>
+        </div>
+      </div>
+
+      <div id="automaticPanel" class="auto-panel">
+        <div class="bot">🤖</div>
+        <h2>Automatic Mode Active</h2>
+        <p>Rover is navigating autonomously using SLAM and path planning.</p>
+        <div class="auto-status">✓ Path following enabled<br>✓ Obstacle avoidance active<br>✓ Heading to next checkpoint</div>
+      </div>
+
+      <div id="manualPanel" class="manual-panel hidden">
+        <div class="joystick" id="joystick" aria-label="Rover directional control">
+          <button class="joy-up" data-direction="FORWARD" type="button">▲</button>
+          <button class="joy-left" data-direction="LEFT" type="button">◀</button>
+          <button class="joy-stop" data-direction="STOP" type="button">●</button>
+          <button class="joy-right" data-direction="RIGHT" type="button">▶</button>
+          <button class="joy-down" data-direction="BACKWARD" type="button">▼</button>
+        </div>
+        <div class="manual-actions">
+          <button type="button">💡 Lights</button>
+          <button type="button">🔊 Horn</button>
+          <button type="button">📷 Take Photo</button>
+          <button type="button">🎥 Record Video</button>
+        </div>
+      </div>
+    </section>
+  </main> 
+  <div id="emergencyModal" class="hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>
